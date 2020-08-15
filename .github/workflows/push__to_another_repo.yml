@@ -1,0 +1,63 @@
+name: Upload to Another Repository
+on:
+  push:
+    branches: 
+      - develop
+    
+jobs:
+  remote-upload:
+   name: Upload PDF file to Another Repository
+   runs-on: ubuntu-latest
+   steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        
+      - name: Setup git repogitories
+        env:
+          GH_REPO_DEPLOY_KEY: ${{ secrets.GH_REPO_DEPLOY_KEY }}
+          GIT_SSH_COMMAND: ssh -i ./deploy_key.pem -o StrictHostKeyChecking=no -F /dev/null
+        run: |
+          echo "${GH_REPO_DEPLOY_KEY}" > ./deploy_key.pem
+          chmod 600 ./deploy_key.pem
+          git config --global pull.rebase false
+          git config --global user.name "Zero-Trust"
+          git config --global user.email "62760177+Zero-Trust@users.noreply.github.com"
+          git submodule add https://github.com/Zero-Trust/pdf.git
+          
+      - name: Get file
+        run: |
+          cd pdf/
+          git checkout master
+          touch main.pdf
+          echo "this is test." > .pdf
+          echo "This is test." > Notes/push_test.txt
+          git add main.pdf
+          git add Notes/push_test.txt
+          
+      - name: Commit to Another Repository
+        env:
+          GIT_SSH_COMMAND: ssh -i ./deploy_key.pem -o StrictHostKeyChecking=no -F /dev/null
+          # only use https
+          GH_DEPLOY_TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}
+        run: |
+          origin=https://${GITHUB_ACTOR}:${GH_DEPLOY_TOKEN}@github.com/Zero-Trust/pdf.git
+          cd pdf/
+          git pull $origin master
+          git add .
+          git commit -m "Deploy ${GITHUB_SHA} by GitHub Actions"
+          git push $origin master
+#           git pull origin master
+#           git add -A
+#           if ! git diff --cached --quiet; then
+#             git commit -m "Deploy ${GITHUB_SHA} by GitHub Actions"
+#             git push origin master
+#           fi
+          
+      - name: clean-up
+        run: |
+          # start from "pushAnotherRepo" directory
+          git submodule deinit --all
+          git rm pdf
+          git rm --cached .gitmodules && rm .gitmodules
+          
+          
