@@ -2,7 +2,7 @@ name: Upload to Another Repository
 on:
   push:
     branches: 
-      - develop
+      - master
     
 jobs:
   remote-upload:
